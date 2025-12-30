@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import html2canvas from "html2canvas";
 
 type Item = {
@@ -34,16 +34,34 @@ export default function Table2ImageMobile() {
   };
 
   const exportImage = async () => {
-    // 根据当前tab选择导出内容
-    const elementId = tab === "预览" ? "previewContent" : "editContent";
-    const element = document.querySelector<HTMLDivElement>(`#${elementId}`);
-    if (!element) {
-      alert("请确保内容已经渲染");
-      return;
+    // 创建一个临时 div 用来渲染编辑页面的内容
+    const tempDiv = document.createElement("div");
+    tempDiv.style.position = "absolute";
+    tempDiv.style.left = "-9999px";
+    tempDiv.style.backgroundColor = "#ffffff";
+    tempDiv.style.padding = "16px";
+    tempDiv.style.width = "360px";
+
+    // 根据当前 tab 渲染内容
+    if (tab === "编辑") {
+      tempDiv.innerHTML = `<h2 style="font-size:16px;font-weight:bold;margin-bottom:12px;">${title}</h2>`;
+      items.forEach((item) => {
+        tempDiv.innerHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>${item.name}</span><span>¥ ${item.amount.toFixed(2)}</span></div>`;
+      });
+      tempDiv.innerHTML += `<div style="display:flex;justify-content:space-between;font-weight:bold;margin-top:12px;"><span>总计</span><span>¥ ${total.toFixed(2)}</span></div>`;
+    } else {
+      const previewElement = document.getElementById("previewContent");
+      if (!previewElement) {
+        alert("请确保预览内容已渲染");
+        return;
+      }
+      tempDiv.appendChild(previewElement.cloneNode(true));
     }
 
+    document.body.appendChild(tempDiv);
+
     try {
-      const canvas = await html2canvas(element, {
+      const canvas = await html2canvas(tempDiv, {
         backgroundColor: "#ffffff",
         useCORS: true,
         allowTaint: true,
@@ -55,6 +73,8 @@ export default function Table2ImageMobile() {
       link.click();
     } catch (err) {
       console.error("导出图片失败:", err);
+    } finally {
+      document.body.removeChild(tempDiv);
     }
   };
 
@@ -140,16 +160,14 @@ export default function Table2ImageMobile() {
               id="previewContent"
               className="w-full max-w-md bg-white text-[#0F172A] p-4 flex flex-col gap-2"
             >
-              <h2 className="text-lg font-bold mb-3 wrap-break-word">
-                {title}
-              </h2>
+              <h2 className="text-lg font-bold mb-3 break-words">{title}</h2>
               <div className="w-full text-sm flex flex-col gap-2">
                 {items.map((i) => (
                   <div
                     key={i.id}
                     className="flex justify-between items-center py-2 border-b"
                   >
-                    <span className="wrap-break-word pr-2">{i.name}</span>
+                    <span className="break-words pr-2">{i.name}</span>
                     <span>¥ {i.amount.toFixed(2)}</span>
                   </div>
                 ))}
